@@ -27,6 +27,24 @@ db.version(1).stores({
   actions: '++id, createdOn, completedOn',
 })
 
+function formatLocalDate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export function todayStr(): string {
-  return new Date().toISOString().slice(0, 10)
+  return formatLocalDate(new Date())
+}
+
+export function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+export function shiftDate(dateStr: string, deltaDays: number): string {
+  const d = parseLocalDate(dateStr)
+  d.setDate(d.getDate() + deltaDays)
+  return formatLocalDate(d)
 }

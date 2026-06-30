@@ -3,10 +3,11 @@ import { db, todayStr, type Action } from './db'
 
 interface ActionsZoneProps {
   openActions: Action[]
-  completedTodayActions: Action[]
+  completedActions: Action[]
+  isToday: boolean
 }
 
-export function ActionsZone({ openActions, completedTodayActions }: ActionsZoneProps) {
+export function ActionsZone({ openActions, completedActions, isToday }: ActionsZoneProps) {
   const [draft, setDraft] = useState('')
 
   async function addAction(e: FormEvent) {
@@ -42,55 +43,55 @@ export function ActionsZone({ openActions, completedTodayActions }: ActionsZoneP
   return (
     <section className="actions-zone">
       <h2>Actions</h2>
-      <form className="action-quick-add" onSubmit={addAction}>
-        <input
-          className="action-input"
-          type="text"
-          placeholder="Add an action and press Enter..."
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-        />
-      </form>
-      <ul className="action-list">
-        {openActions.map((action) => (
-          <li key={action.id} className="action-item">
-            <label>
-              <input
-                type="checkbox"
-                checked={false}
-                onChange={() => complete(action)}
-              />
-              <span>{action.title}</span>
-            </label>
-            {action.createdOn !== todayStr() && (
-              <span className="action-rolled-from">since {action.createdOn}</span>
-            )}
-          </li>
-        ))}
-        {openActions.length === 0 && (
-          <li className="action-empty">Nothing open. Add one above.</li>
-        )}
-      </ul>
 
-      {completedTodayActions.length > 0 && (
+      {isToday && (
         <>
-          <h3>Completed today</h3>
-          <ul className="action-list action-list-done">
-            {completedTodayActions.map((action) => (
-              <li key={action.id} className="action-item action-item-done">
+          <form className="action-quick-add" onSubmit={addAction}>
+            <input
+              className="action-input"
+              type="text"
+              placeholder="Add an action and press Enter..."
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+          </form>
+          <ul className="action-list">
+            {openActions.map((action) => (
+              <li key={action.id} className="action-item">
                 <label>
                   <input
                     type="checkbox"
-                    checked={true}
-                    onChange={() => reopen(action)}
+                    checked={false}
+                    onChange={() => complete(action)}
                   />
                   <span>{action.title}</span>
                 </label>
+                {action.createdOn !== todayStr() && (
+                  <span className="action-rolled-from">since {action.createdOn}</span>
+                )}
               </li>
             ))}
+            {openActions.length === 0 && (
+              <li className="action-empty">Nothing open. Add one above.</li>
+            )}
           </ul>
         </>
       )}
+
+      <h3>{isToday ? 'Completed today' : 'Completed'}</h3>
+      <ul className="action-list action-list-done">
+        {completedActions.map((action) => (
+          <li key={action.id} className="action-item action-item-done">
+            <label>
+              <input type="checkbox" checked={true} onChange={() => reopen(action)} />
+              <span>{action.title}</span>
+            </label>
+          </li>
+        ))}
+        {completedActions.length === 0 && (
+          <li className="action-empty">Nothing completed{isToday ? ' yet' : ''}.</li>
+        )}
+      </ul>
     </section>
   )
 }

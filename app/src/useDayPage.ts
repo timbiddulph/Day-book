@@ -2,26 +2,29 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { db, todayStr, type Action, type Note } from './db'
 
 export interface DayPage {
-  today: string
+  date: string
+  isToday: boolean
   note: Note | undefined
   openActions: Action[]
-  completedTodayActions: Action[]
+  completedActions: Action[]
 }
 
-export function useDayPage(): DayPage | undefined {
+export function useDayPage(viewedDate: string): DayPage | undefined {
   return useLiveQuery(async () => {
-    const today = todayStr()
+    const isToday = viewedDate === todayStr()
 
-    const note = await db.notes.where('noteDate').equals(today).first()
+    const note = await db.notes.where('noteDate').equals(viewedDate).first()
 
     const allActions = await db.actions.toArray()
-    const openActions = allActions
-      .filter((a) => a.completedOn === null)
-      .sort((a, b) => a.createdOn.localeCompare(b.createdOn))
-    const completedTodayActions = allActions
-      .filter((a) => a.completedOn === today)
+    const openActions = isToday
+      ? allActions
+          .filter((a) => a.completedOn === null)
+          .sort((a, b) => a.createdOn.localeCompare(b.createdOn))
+      : []
+    const completedActions = allActions
+      .filter((a) => a.completedOn === viewedDate)
       .sort((a, b) => a.createdAt - b.createdAt)
 
-    return { today, note, openActions, completedTodayActions }
-  }, [])
+    return { date: viewedDate, isToday, note, openActions, completedActions }
+  }, [viewedDate])
 }
