@@ -31,7 +31,8 @@ function App() {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement
-      const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA'
+      const isTyping =
+        target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
       if (isTyping) return
 
       if (e.key === 'n') {

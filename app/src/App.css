@@ -90,16 +90,35 @@
   margin-top: 1rem;
 }
 
-.notes-textarea {
-  width: 100%;
-  min-height: 60vh;
-  resize: vertical;
-  border: none;
-  outline: none;
+.notes-toolbar {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.notes-toolbar button {
+  font: inherit;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
   background: transparent;
-  font-family: inherit;
-  font-size: 1rem;
-  line-height: 1.5;
+  color: inherit;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+  min-width: 2rem;
+}
+
+.notes-toolbar button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.notes-editor {
+  min-height: 60vh;
+}
+
+.notes-editor .cm-editor {
+  height: 100%;
 }
 
 .action-quick-add {
