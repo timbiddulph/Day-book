@@ -1,5 +1,5 @@
 .daybook {
-  max-width: 880px;
+  max-width: 1080px;
   margin: 0 auto;
   padding: 2rem 1.5rem 4rem;
   display: flex;
@@ -63,7 +63,7 @@
 
 @media (min-width: 720px) {
   .daybook-body {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 3fr 2fr;
   }
 }
 
@@ -92,7 +92,7 @@
 
 .notes-textarea {
   width: 100%;
-  min-height: 280px;
+  min-height: 60vh;
   resize: vertical;
   border: none;
   outline: none;
