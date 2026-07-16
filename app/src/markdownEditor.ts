@@ -2,8 +2,15 @@ import { EditorSelection, RangeSetBuilder } from '@codemirror/state'
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view'
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { markdown } from '@codemirror/lang-markdown'
+import {
+  type CompletionContext,
+  type CompletionResult,
+  type CompletionSource,
+  startCompletion,
+} from '@codemirror/autocomplete'
 import { tags as t } from '@lezer/highlight'
 import type { SyntaxNode } from '@lezer/common'
+import { searchEmoji } from './emojiData'
 
 const bearHighlightStyle = HighlightStyle.define([
   { tag: t.heading1, fontSize: '1.6em', fontWeight: '700' },
@@ -59,6 +66,13 @@ const bearTheme = EditorView.theme({
   // Two-class specificity so this reliably beats the single-class
   // tag-based dimming rule regardless of stylesheet injection order.
   '.cm-line .cm-ordered-mark': { opacity: '0.7 !important' },
+  '.cm-tooltip-autocomplete': {
+    fontFamily: 'inherit',
+    border: '1px solid rgba(0, 0, 0, 0.15)',
+    borderRadius: '8px',
+    overflow: 'hidden',
+  },
+  '.cm-tooltip-autocomplete ul li': { padding: '0.3rem 0.6rem' },
 })
 
 const LIST_INDENT_EM = 1.4
@@ -138,8 +152,31 @@ const listDecorations = ViewPlugin.fromClass(
   { decorations: (v) => v.decorations },
 )
 
+const emojiCompletionSource: CompletionSource = (
+  context: CompletionContext,
+): CompletionResult | null => {
+  const match = context.matchBefore(/:[\w+-]*$/)
+  if (!match) return null
+  const query = match.text.slice(1)
+  const results = searchEmoji(query)
+  if (results.length === 0) return null
+  return {
+    from: match.from,
+    to: match.to,
+    filter: false,
+    options: results.map((entry) => ({
+      label: `${entry.emoji}  ${entry.name}`,
+      apply: entry.emoji,
+      type: 'emoji',
+    })),
+  }
+}
+
+const markdownLang = markdown()
+
 export const noteEditorExtensions = [
-  markdown(),
+  markdownLang,
+  markdownLang.language.data.of({ autocomplete: emojiCompletionSource }),
   syntaxHighlighting(bearHighlightStyle),
   bearTheme,
   listDecorations,
@@ -213,6 +250,19 @@ function insertSection(view: EditorView) {
   view.focus()
 }
 
+function insertEmojiPicker(view: EditorView) {
+  view.dispatch(
+    view.state.changeByRange((range) => {
+      return {
+        changes: { from: range.from, to: range.to, insert: ':' },
+        range: EditorSelection.cursor(range.from + 1),
+      }
+    }),
+  )
+  view.focus()
+  startCompletion(view)
+}
+
 export const editorCommands = {
   bold: (view: EditorView) => wrapSelection(view, '**'),
   italic: (view: EditorView) => wrapSelection(view, '_'),
@@ -222,6 +272,7 @@ export const editorCommands = {
   list: (view: EditorView) => toggleLinePrefix(view, '- '),
   link: (view: EditorView) => insertLink(view),
   section: (view: EditorView) => insertSection(view),
+  emoji: (view: EditorView) => insertEmojiPicker(view),
 }
 
 export type EditorCommands = typeof editorCommands

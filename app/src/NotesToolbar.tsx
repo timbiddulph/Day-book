@@ -14,6 +14,7 @@ const buttons: Array<{ label: string; title: string; command: keyof typeof edito
   { label: '</>', title: 'Code', command: 'code' },
   { label: '🔗', title: 'Link', command: 'link' },
   { label: '§', title: 'New section', command: 'section' },
+  { label: '😀', title: 'Emoji (or type :)', command: 'emoji' },
 ]
 
 export function NotesToolbar({ view }: NotesToolbarProps) {
