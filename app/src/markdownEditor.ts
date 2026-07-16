@@ -1,8 +1,9 @@
-import { EditorSelection } from '@codemirror/state'
-import { EditorView } from '@codemirror/view'
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
+import { EditorSelection, RangeSetBuilder } from '@codemirror/state'
+import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view'
+import { HighlightStyle, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { markdown } from '@codemirror/lang-markdown'
 import { tags as t } from '@lezer/highlight'
+import type { SyntaxNode } from '@lezer/common'
 
 const bearHighlightStyle = HighlightStyle.define([
   { tag: t.heading1, fontSize: '1.6em', fontWeight: '700' },
@@ -38,12 +39,99 @@ const bearTheme = EditorView.theme({
   '.cm-content': { fontFamily: 'inherit', lineHeight: '1.5', padding: 0 },
   '.cm-scroller': { fontFamily: 'inherit' },
   '.cm-line': { padding: 0 },
+  // Hanging indent for list lines: padding shifts the whole line right,
+  // negative text-indent pulls just the first visual line (bullet/number)
+  // back so wrapped continuation text aligns under the item's own text,
+  // not under the bullet.
+  '.cm-list-line': { textIndent: '-1.4em' },
+  '.cm-bullet-dot': { opacity: '0.55', marginRight: '0.1em' },
+  // Two-class specificity so this reliably beats the single-class
+  // tag-based dimming rule regardless of stylesheet injection order.
+  '.cm-line .cm-ordered-mark': { opacity: '0.7 !important' },
 })
+
+const LIST_INDENT_EM = 1.4
+
+class BulletWidget extends WidgetType {
+  toDOM() {
+    const span = document.createElement('span')
+    span.className = 'cm-bullet-dot'
+    span.textContent = '•'
+    return span
+  }
+  eq() {
+    return true
+  }
+}
+
+function listNestingDepth(listItem: SyntaxNode): number {
+  let depth = 0
+  let node: SyntaxNode | null = listItem
+  while (node) {
+    if (node.name === 'BulletList' || node.name === 'OrderedList') depth++
+    node = node.parent
+  }
+  return depth
+}
+
+function buildListDecorations(view: EditorView): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>()
+  const seenLines = new Set<number>()
+  for (const { from, to } of view.visibleRanges) {
+    syntaxTree(view.state).iterate({
+      from,
+      to,
+      enter: (node) => {
+        if (node.name !== 'ListMark') return
+        const listItem = node.node.parent
+        const list = listItem?.parent
+        if (!listItem || !list) return
+
+        const line = view.state.doc.lineAt(node.from)
+        if (!seenLines.has(line.number)) {
+          seenLines.add(line.number)
+          const depth = listNestingDepth(list)
+          builder.add(
+            line.from,
+            line.from,
+            Decoration.line({
+              class: 'cm-list-line',
+              attributes: { style: `padding-left: ${depth * LIST_INDENT_EM}em` },
+            }),
+          )
+        }
+
+        if (list.name === 'BulletList') {
+          builder.add(node.from, node.to, Decoration.replace({ widget: new BulletWidget() }))
+        } else if (list.name === 'OrderedList') {
+          builder.add(node.from, node.to, Decoration.mark({ class: 'cm-ordered-mark' }))
+        }
+      },
+    })
+  }
+  return builder.finish()
+}
+
+const listDecorations = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet
+    constructor(view: EditorView) {
+      this.decorations = buildListDecorations(view)
+    }
+    update(update: ViewUpdate) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = buildListDecorations(update.view)
+      }
+    }
+  },
+  { decorations: (v) => v.decorations },
+)
 
 export const noteEditorExtensions = [
   markdown(),
   syntaxHighlighting(bearHighlightStyle),
   bearTheme,
+  listDecorations,
   EditorView.lineWrapping,
 ]
 
