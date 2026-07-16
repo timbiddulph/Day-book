@@ -36,9 +36,20 @@ const bearHighlightStyle = HighlightStyle.define([
 const bearTheme = EditorView.theme({
   '&': { fontSize: '1rem', backgroundColor: 'transparent' },
   '&.cm-focused': { outline: 'none' },
-  '.cm-content': { fontFamily: 'inherit', lineHeight: '1.5', padding: 0 },
+  // Force our own dark text color rather than relying on inheritance —
+  // CodeMirror's content area otherwise ends up light/washed-out looking
+  // on some mobile browsers.
+  '.cm-content': {
+    fontFamily: 'inherit',
+    lineHeight: '1.5',
+    padding: 0,
+    color: 'var(--text-h)',
+    caretColor: 'var(--text-h)',
+  },
   '.cm-scroller': { fontFamily: 'inherit' },
   '.cm-line': { padding: 0 },
+  // CodeMirror's default placeholder color (#888) is too low-contrast.
+  '.cm-placeholder': { color: 'var(--text)', opacity: '0.5' },
   // Hanging indent for list lines: padding shifts the whole line right,
   // negative text-indent pulls just the first visual line (bullet/number)
   // back so wrapped continuation text aligns under the item's own text,

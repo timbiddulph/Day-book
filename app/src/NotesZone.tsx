@@ -92,6 +92,7 @@ export function NotesZone({ date, note }: NotesZoneProps) {
         key={date}
         className="notes-editor"
         value={note?.content ?? ''}
+        theme="none"
         extensions={noteEditorExtensions}
         basicSetup={basicSetupOptions}
         placeholder={
