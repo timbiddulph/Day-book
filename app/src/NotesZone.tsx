@@ -36,6 +36,22 @@ export function NotesZone({ date, note }: NotesZoneProps) {
   // Re-render once the CodeMirror view exists so the toolbar can bind to it.
   const [view, setView] = useState<EditorView | undefined>(undefined)
 
+  // Freeze the value handed to CodeMirror the moment `date` changes, and
+  // never update it again for that same date — including when `note`
+  // changes because OUR OWN save just landed via Dexie's live query. If we
+  // fed a continuously-live `note?.content` as the `value` prop instead,
+  // resuming typing in the window between a debounced save completing and
+  // its live-query echo re-rendering would force-apply that now-stale
+  // content over whatever was typed since, silently deleting it. Combined
+  // with `key={date}` below (a true remount on date change), this value is
+  // only ever read once, at construction, for each day's editor instance.
+  const lastDateRef = useRef(date)
+  const initialContentRef = useRef(note?.content ?? '')
+  if (lastDateRef.current !== date) {
+    lastDateRef.current = date
+    initialContentRef.current = note?.content ?? ''
+  }
+
   const flush = useCallback(async () => {
     const p = pending.current
     if (!p) return
@@ -85,13 +101,11 @@ export function NotesZone({ date, note }: NotesZoneProps) {
       <NotesToolbar view={view} />
       <CodeMirror
         // Remount on date change: each day gets a fresh EditorView created
-        // with that day's content as its true initial doc. This sidesteps
-        // @uiw/react-codemirror's value-sync-on-existing-view code path
-        // entirely for resets, which is what let a stale `draft` collide
-        // with a same-valued target and silently no-op a reset.
+        // with that day's content as its true initial doc, matching
+        // initialContentRef above.
         key={date}
         className="notes-editor"
-        value={note?.content ?? ''}
+        value={initialContentRef.current}
         theme="none"
         extensions={noteEditorExtensions}
         basicSetup={basicSetupOptions}
