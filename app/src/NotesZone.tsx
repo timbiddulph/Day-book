@@ -74,7 +74,7 @@ export function NotesZone({ date, note }: NotesZoneProps) {
     (content: string) => {
       pending.current = { ...latest.current, content }
       window.clearTimeout(saveTimer.current)
-      saveTimer.current = window.setTimeout(flush, 400)
+      saveTimer.current = window.setTimeout(flush, 200)
     },
     [flush],
   )
@@ -89,6 +89,31 @@ export function NotesZone({ date, note }: NotesZoneProps) {
       }
     }
   }, [date, flush])
+
+  useEffect(() => {
+    // Flush immediately whenever the tab is about to be hidden or
+    // unloaded — a flaky/switching network connection can cause the OS or
+    // browser to suspend, discard, or reload the tab (captive-portal
+    // checks stealing focus, battery/data-saver tab discarding, etc.).
+    // Waiting on the debounce timer alone leaves a window where an
+    // interruption mid-typing loses whatever hasn't been written yet.
+    function flushNow() {
+      if (saveTimer.current !== undefined) {
+        window.clearTimeout(saveTimer.current)
+        saveTimer.current = undefined
+      }
+      flush()
+    }
+    function onVisibilityChange() {
+      if (document.hidden) flushNow()
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('pagehide', flushNow)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('pagehide', flushNow)
+    }
+  }, [flush])
 
   const handleCreateEditor = useCallback((createdView: EditorView) => {
     activeView = createdView
