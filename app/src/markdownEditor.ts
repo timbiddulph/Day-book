@@ -2,11 +2,9 @@ import { EditorSelection, RangeSetBuilder } from '@codemirror/state'
 import {
   Decoration,
   type DecorationSet,
-  drawSelection,
   EditorView,
   ViewPlugin,
   type ViewUpdate,
-  WidgetType,
 } from '@codemirror/view'
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { markdown } from '@codemirror/lang-markdown'
@@ -70,7 +68,25 @@ const bearTheme = EditorView.theme({
   // back so wrapped continuation text aligns under the item's own text,
   // not under the bullet.
   '.cm-list-line': { textIndent: '-1.4em' },
-  '.cm-bullet-dot': { opacity: '0.55', marginRight: '0.1em' },
+  // Bullet markers keep their real "-"/"*"/"+" text node (just hidden) rather
+  // than being replaced by a widget — a DOM node swap can leave engines
+  // unable to compute cursor coordinates right at that boundary, silently
+  // dropping the cursor there. A CSS-only overlay never touches the DOM
+  // text structure that cursor positioning depends on.
+  //
+  // Hiding it via `visibility: hidden` (tried first) turns out to break
+  // typing itself: the browser silently drops every keystroke typed after
+  // a hidden node in a contenteditable line, losing real content, not just
+  // hiding it visually. `color: transparent` keeps the character a normal,
+  // fully-present (just invisibly colored) text node, which avoids that.
+  '.cm-bullet-mark': { color: 'transparent', position: 'relative' },
+  '.cm-bullet-mark::before': {
+    content: '"•"',
+    position: 'absolute',
+    left: 0,
+    color: 'var(--text-h)',
+    opacity: '0.55',
+  },
   // Two-class specificity so this reliably beats the single-class
   // tag-based dimming rule regardless of stylesheet injection order.
   '.cm-line .cm-ordered-mark': { opacity: '0.7 !important' },
@@ -84,18 +100,6 @@ const bearTheme = EditorView.theme({
 })
 
 const LIST_INDENT_EM = 1.4
-
-class BulletWidget extends WidgetType {
-  toDOM() {
-    const span = document.createElement('span')
-    span.className = 'cm-bullet-dot'
-    span.textContent = '•'
-    return span
-  }
-  eq() {
-    return true
-  }
-}
 
 function listNestingDepth(listItem: SyntaxNode): number {
   let depth = 0
@@ -135,7 +139,7 @@ function buildListDecorations(view: EditorView): DecorationSet {
         }
 
         if (list.name === 'BulletList') {
-          builder.add(node.from, node.to, Decoration.replace({ widget: new BulletWidget() }))
+          builder.add(node.from, node.to, Decoration.mark({ class: 'cm-bullet-mark' }))
         } else if (list.name === 'OrderedList') {
           builder.add(node.from, node.to, Decoration.mark({ class: 'cm-ordered-mark' }))
         }
@@ -189,13 +193,6 @@ export const noteEditorExtensions = [
   bearTheme,
   listDecorations,
   EditorView.lineWrapping,
-  // Solid (non-blinking) cursor: the default 1.2s blink means glancing at
-  // an idle cursor (e.g. right after pressing Enter, before typing) has
-  // roughly even odds of landing on the invisible half of the cycle,
-  // which reads as "no cursor" until the next keystroke resets it visible.
-  // A notes app built around fast, glanceable capture is better served by
-  // a cursor that's simply always there.
-  drawSelection({ cursorBlinkRate: 0 }),
 ]
 
 function wrapSelection(view: EditorView, mark: string) {
