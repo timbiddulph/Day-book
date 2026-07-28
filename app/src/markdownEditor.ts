@@ -55,7 +55,17 @@ const bearTheme = EditorView.theme({
   '.cm-content': {
     fontFamily: 'inherit',
     lineHeight: '1.5',
-    padding: 0,
+    // 2px of left padding, not 0. The cursor is drawn at `left: 0` with
+    // `margin-left: -0.6px`, so with no padding it straddles the scroller's
+    // left edge and `overflow: auto` clips away most of its 1px width —
+    // leaving a ~0.4px sliver that reads as "no cursor at all" until you
+    // type a character and it moves right. CodeMirror's own default
+    // (`.cm-line { padding: 0 2px 0 6px }`) exists for exactly this reason;
+    // zeroing it out to kill the default indent took the cursor's room with
+    // it. This must live on .cm-content rather than .cm-line, because list
+    // lines carry an inline padding-left for nesting depth that would
+    // override any .cm-line rule.
+    padding: '0 0 0 2px',
     color: 'var(--text-h)',
     caretColor: 'var(--text-h)',
   },
