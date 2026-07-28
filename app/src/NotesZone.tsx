@@ -43,6 +43,9 @@ const basicSetupOptions: BasicSetupOptions = {
   lineNumbers: false,
   foldGutter: false,
   highlightActiveLine: false,
+  // Disabled here so noteEditorExtensions can provide its own drawSelection
+  // with blinking turned off, without registering two competing instances.
+  drawSelection: false,
 }
 
 let activeView: EditorView | undefined

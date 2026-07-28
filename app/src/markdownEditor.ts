@@ -1,5 +1,13 @@
 import { EditorSelection, RangeSetBuilder } from '@codemirror/state'
-import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate, WidgetType } from '@codemirror/view'
+import {
+  Decoration,
+  type DecorationSet,
+  drawSelection,
+  EditorView,
+  ViewPlugin,
+  type ViewUpdate,
+  WidgetType,
+} from '@codemirror/view'
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from '@codemirror/language'
 import { markdown } from '@codemirror/lang-markdown'
 import {
@@ -181,6 +189,13 @@ export const noteEditorExtensions = [
   bearTheme,
   listDecorations,
   EditorView.lineWrapping,
+  // Solid (non-blinking) cursor: the default 1.2s blink means glancing at
+  // an idle cursor (e.g. right after pressing Enter, before typing) has
+  // roughly even odds of landing on the invisible half of the cycle,
+  // which reads as "no cursor" until the next keystroke resets it visible.
+  // A notes app built around fast, glanceable capture is better served by
+  // a cursor that's simply always there.
+  drawSelection({ cursorBlinkRate: 0 }),
 ]
 
 function wrapSelection(view: EditorView, mark: string) {
